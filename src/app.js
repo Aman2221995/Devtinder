@@ -1,20 +1,31 @@
- const express = require('express');
+const express = require("express");
 
- const app = express();
+const app = express();
 
-  
+app.use(
+  "/user",[
+  (req, res, next) => {
+    console.log("Response");
 
-// This will only match the GET method API call
-app.get("/user/:userId/:name/:password",(req,res)=>{
-   console.log(req.query);
-   console.log(req.params)
-   res.send({firstName:"Aman",lastName:"Shukla"})
-})
+    next();
+  },
+  (req, res, next) => {
+    console.log("2nd Response");
+    // res.send("2nd response");
+    next();
+  }],
+  (req, res, next) => {
+    console.log("3rd Response");
+    // res.send("3rd response");
+    next();
+  },
+  (req, res, next) => {
+    console.log("4th Response");
+    res.send("4th response");
+    next();
+  }
+);
 
-
-
- 
-
- app.listen(7777,()=>{
-    console.log("Server is running on port 3000")
- });
+app.listen(7777, () => {
+  console.log("Server is running on port 7777");
+});
