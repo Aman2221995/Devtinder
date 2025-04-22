@@ -2,25 +2,27 @@ const express = require("express");
 
 const app = express();
 
-const { adminAuth, userAuth } = require("./middlewares/auth");
+// app.use("/",(err,req,res,next)=>{
+//   res.send("Hello")
+// })
 
-app.use("/admin", adminAuth);
-
-app.get("/user", userAuth, (req, res, next) => {
-  res.send("User Data send");
+app.get("/getUserData", (req, res, next) => {
+  try {
+    throw new Error("vdvdv");
+    res.send("User Data send");
+  } catch (error) {
+    res.status(500).send("Some error please contact support")
+  }
+  
+  
 });
 
-//We don't require to pass userAuth because logged in user does not required
-app.post("/user/login",(req,res)=>{
-  res.send("User logged in successfully");
-})
-
-app.get("/admin/getAllData", (req, res, next) => {
-  res.send("All Data send");
-});
-
-app.get("/admin/deleteUser", (req, res, next) => {
-  res.send("Deleted a user");
+app.use("/", (err, req, res, next) => {
+  console.log(err)
+  if (err) {
+    res.status(500).send("something went wrong");
+  }
+  res.send("Hi");
 });
 
 app.listen(7777, () => {
