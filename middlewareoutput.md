@@ -67,3 +67,16 @@ app.use(
 app.listen(7777, () => {
   console.log("Server is running on port 7777");
 });
+
+/////////////////////////
+app.get("/user", (req, res,next) => {
+  console.log("Handling the route user2!");
+  // res.send("2nd Route Handler");
+  next();
+});
+app.get("/user", (req, res, next) => {
+  console.log("Response");
+  next();
+});
+
+o/p->error as there is no response in routes
