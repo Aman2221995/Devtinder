@@ -2,98 +2,89 @@ const express = require("express");
 const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
+const { validateSignUpData } = require("./utils/validation");
+
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signup", async (req, res) => {
-  console.log(req.body);
   try {
-    const user = new User(req.body);
+    const { firstName, lastName, emailId, password } = req.body;
+    //Encrypt the password
+    const passwordHash = await bcrypt.hash(password, 10);
+    console.log(passwordHash);
+    //Validation of data
+    validateSignUpData(req);
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      password: passwordHash,
+    });
 
     await user.save();
     res.send("User Added successfully");
   } catch (error) {
-    res.status(400).send("Error saving the user" + error.message);
+    res.status(400).send("Error: " + error.message);
   }
 
   //Creating a new instance of the User nodel
 });
 
-//Get user by email
-app.get("/user", async (req, res) => {
-  const userEmail = req.body.emailId;
-
+app.post("/login", async (req, res) => {
   try {
-    const users = await User.findById("6827d7141d0d2022e1cc95bd");
-    if (!users) {
-      res.status(400).send("User not found");
-    } else {
-      res.send(users);
-    }
-    // const users = await User.find({ emailId: userEmail });
-    // if (users.length === 0) {
-    //   res.status(404).send("User Not Found");
-    // } else {
-    //   res.send(users);
-    // }
-  } catch (error) {
-    res.status(400).send("Something went wrong");
-  }
-});
+    const { emailId, password } = req.body;
 
-//Feed API-GET /feed-get all the users from the database
-app.get("/feed", async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.send(users);
-  } catch (error) {
-    res.status(400).send("Something went wrong");
-  }
-});
-
-//Delete a user from the database
-app.delete("/user", async (req, res) => {
-  const userId = req.body.userId;
-  try {
-    const user = await User.findByIdAndDelete(userId);
-
-    res.send("User deleted successfully");
-  } catch (error) {
-    res.status(400).send("Something went wrong");
-  }
-});
-
-//Update data of the user
-app.patch("/user/:userId", async (req, res) => {
-  const UserId = req.params?.userId;
-  const data = req.body;
-
-  try {
-    const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "age", "skills"];
-
-    const isUpdateAllowed = Object.keys(data).every((k) =>
-      ALLOWED_UPDATES.includes(k)
-    );
-
-    console.log(isUpdateAllowed);
-
-    if (!isUpdateAllowed) {
-      throw new Error("Update not allowed");
-    }
-
-    if (data?.skills.length > 10) {
-      throw new Error("Skills cannot be more than 10");
-    }
-
-    const user = await User.findByIdAndUpdate({ _id: UserId }, data, {
-      returnDocument: "after",
-      runValidators: true,
-    });
+    const user = await User.findOne({ emailId });
     console.log(user);
-    res.send("User Updated successfully");
+    console.log(password);
+
+    if (!user) {
+      throw new Error("Invalid Credentials");
+    }
+
+    const isPasswordValid = await user.validatePassword(password);
+
+    if (isPasswordValid) {
+      /*
+      1.Create a JWT Token
+      2.Add the token to cookie and send the response back to the user.
+      */
+
+      const token = await user.getJWT();
+      console.log(token);
+
+      res.cookie("token", token, { expires: new Date(Date.now() + 2 * 36000) });
+
+      res.send("Login Successfull");
+    } else {
+      throw new Error("Invalid Credentials");
+    }
   } catch (error) {
-    res.status(400).send("UPDATE FAILED:" + error.message);
+    res.status(400).send("Error: " + error.message);
   }
+});
+
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+
+    res.send(user);
+  } catch (error) {
+    res.status(400).send("Error " + error.message);
+  }
+});
+
+app.post("/sendConnectioRequest", userAuth, async (req, res) => {
+  const user = req.user;
+
+  //Sending a connection request
+
+  res.send(user.firstName + " sent the connection request");
 });
 
 connectDB()

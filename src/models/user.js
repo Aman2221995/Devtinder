@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const userSchema = new mongoose.Schema(
   {
@@ -18,20 +20,20 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       unique: true,
       trim: true,
-      validate(value){
-        if(!validator.isEmail(value)) {
-          throw new Error("Invalid email address"+value)
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new Error("Invalid email address" + value);
         }
-      }
+      },
     },
     password: {
       type: String,
       required: true,
       validate(value) {
-        if(!validator.isStrongPassword(value)){
-          throw new Error("Enter a Strong Password"+value);
+        if (!validator.isStrongPassword(value)) {
+          throw new Error("Enter a Strong Password" + value);
         }
-      }
+      },
     },
     age: {
       type: Number,
@@ -50,8 +52,8 @@ const userSchema = new mongoose.Schema(
       default:
         "https://static.vecteezy.com/system/resources/thumbnails/045/944/199/small/male-default-placeholder-avatar-profile-gray-picture-isolated-on-background-man-silhouette-picture-for-user-profile-in-social-media-forum-chat-greyscale-illustration-vector.jpg",
       validate(value) {
-        if(!validator.isURL(value)) {
-          throw new Error("Invalid Photo URL:" + value)
+        if (!validator.isURL(value)) {
+          throw new Error("Invalid Photo URL:" + value);
         }
       },
     },
@@ -67,6 +69,26 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+//Precaution:Don't use arrow function here
+userSchema.methods.getJWT = async function () {
+  const user = this;
+  const token = await jwt.sign({ _id: user._id }, "DEV@Tinder$790", {
+    expiresIn: "1m",
+  });
+
+  return token;
+};
+
+userSchema.methods.validatePassword = async function (passwordInputByUser) {
+  const user = this;
+  const passwordHash = user.password;
+  const isPasswordValid = await bcrypt.compare(
+    passwordInputByUser,
+    passwordHash
+  );
+  return isPasswordValid;
+};
 
 module.exports = mongoose.model("User", userSchema);
 
